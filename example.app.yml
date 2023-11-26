@@ -1,0 +1,13 @@
+runtime: python39
+
+
+# [START handlers]
+handlers:
+- url: /.*
+  script: main.app
+# [END handlers]
+
+env_variables:
+  USER_MICROSERVICES: "YOUR-URL-ADMIN"
+  SPANNER_INSTANCE: "YOUR-SPANNER_INSTANCE"
+  SPANNER_DATABASE: "YOUR-SPANNER_DATABASE"
