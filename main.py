@@ -21,6 +21,14 @@ user_microservices = os.getenv("USER_MICROSERVICES")
 instance_id = os.getenv("SPANNER_INSTANCE")
 database_id = os.getenv("SPANNER_DATABASE")
 # [END create_spanner]
+def is_admin(token):
+    response = requests.get(user_microservices +"/isAdmin", params={'token': token})
+    if response.status_code == 200:
+        print(response.json())
+        return response.json().get('is_admin', False)
+    else:
+        print(f"Failed to check admin status. Status code: {response.status_code}")
+        return False
 
 def admin_required(f):
     @wraps(f)
@@ -35,29 +43,6 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def is_admin(token):
-    response = requests.get(user_microservices +"/isAdmin", params={'token': token})
-    if response.status_code == 200:
-        print(response.json())
-        return response.json().get('is_admin', False)
-    else:
-        print(f"Failed to check admin status. Status code: {response.status_code}")
-        return False
-
-def string_val(val):
-    return "'" + val  + "'"
-# Works for everthing execpt "cuve" table
-def get_insert_id_value(table, values):
-    if not isinstance(values, list):
-        values = [values]
-    value_strings = ", ".join([f"({get_next_id(table)}, '{val}')" for val in values])
-    return f"INSERT INTO {table} (id, {table}) VALUES {value_strings};"
-
-def get_insert_cols_values(table, cols, values):
-    if not isinstance(values, list):
-        values = [values]
-    value_strings = ", ".join([f"(0, {val})" for val in values])
-    return f"INSERT INTO {table} (id, {cols}) VALUES {value_strings};"
 
 def get_next_id(table):
     sql = "SELECT next_value FROM sequences WHERE name=@tableName;"
@@ -98,7 +83,6 @@ def incr_next_id(table):
     return next_val
 
 
- 
 
 @app.route("/insert_wine", methods=['POST'])
 @admin_required
