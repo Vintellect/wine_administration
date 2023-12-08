@@ -1,12 +1,15 @@
 # [START app]
 import logging
 import requests
+import random
+import string
 
 # [START imports]
 from flask import Flask, request
 from flask import jsonify
 from flask import make_response
 from google.cloud import spanner
+from google.cloud import storage
 import os
 from functools import wraps
 # [END imports]
@@ -17,9 +20,11 @@ app = Flask(__name__)
 
 # [START create_spanner]
 spanner_client = spanner.Client()
+storage_client = storage.Client()
 user_microservices = os.getenv("USER_MICROSERVICES")
 instance_id = os.getenv("SPANNER_INSTANCE")
 database_id = os.getenv("SPANNER_DATABASE")
+bucket_image = os.getenv("BUCKET_IMAGE")
 # [END create_spanner]
 def is_admin(token):
     response = requests.get(user_microservices +"/isAdmin", params={'token': token})
@@ -83,6 +88,33 @@ def incr_next_id(table):
     return next_val
 
 
+@app.route("/add_image", methods=['POST'])
+@admin_required
+def add_image():
+    if 'image' not in request.files:
+        return {"error": "No image provided"}, 400
+
+    image = request.files['image']
+    filename = ""
+    # Make sure the image is not empty
+    if image.filename == '':
+        letters = string.ascii_letters
+        filename = ''.join(random.choice(letters) for i in range(24))
+    else:
+        filename = image.filename
+    
+    try:
+        bucket = storage_client.bucket(bucket_image)
+        blob = bucket.blob(image.filename)
+        blob.upload_from_string(
+            image.read(),
+            content_type=image.content_type
+        )
+
+        return {"name": image.filename}
+    except Exception as e:
+        return {"error": str(e)}, 500
+
 
 @app.route("/insert_wine", methods=['POST'])
 @admin_required
@@ -127,6 +159,8 @@ def insert_wine():
                 incr_next_id(field)
 
         for field in wine_data["data"]:
+            if field == "percent":
+                id[field] = float(wine_data["data"][field]) 
             if field != "cepage":
                 id[field] = wine_data["data"][field]
         id["id"] = get_next_id("wine")
@@ -152,3 +186,4 @@ def insert_wine():
 
 
 # [END app]
+
