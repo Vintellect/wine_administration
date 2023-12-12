@@ -26,6 +26,7 @@ instance_id = os.getenv("SPANNER_INSTANCE")
 database_id = os.getenv("SPANNER_DATABASE")
 bucket_image = os.getenv("BUCKET_IMAGE")
 # [END create_spanner]
+
 def is_admin(token):
     response = requests.get(user_microservices +"/isAdmin", params={'token': token})
     if response.status_code == 200:
